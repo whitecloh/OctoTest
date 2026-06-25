@@ -1,0 +1,21 @@
+{
+    "name": "OctoTest.EditMode.Tests",
+    "rootNamespace": "OctoGames.TestTask.Tests",
+    "references": [
+        "OctoTest.Runtime"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false,
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ]
+}

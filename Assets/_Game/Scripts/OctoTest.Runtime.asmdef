@@ -2,6 +2,7 @@
     "name": "OctoTest.Runtime",
     "rootNamespace": "OctoGames.TestTask",
     "references": [
+        "Leopotam.EcsLite",
         "Unity.TextMeshPro",
         "UnityEngine.UI"
     ],

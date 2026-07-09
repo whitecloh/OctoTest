@@ -1,7 +1,9 @@
 using System;
-using OctoGames.TestTask.Gameplay.Units;
-using OctoGames.TestTask.UI.Popups;
+using OctoGames.TestTask.Gameplay.Units.Diagnostics;
+using OctoGames.TestTask.Gameplay.Units.Presentation;
+using OctoGames.TestTask.UI;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace OctoGames.TestTask.App.Bootstrap
 {
@@ -11,38 +13,57 @@ namespace OctoGames.TestTask.App.Bootstrap
         [SerializeField] private UiRoot uiRoot;
 
         [Header("Units")]
-        [SerializeField] private UnitSceneService unitSceneService;
+        [SerializeField] private UnitsScenePresenter unitsScenePresenter;
         [SerializeField] private UnitsDashboardPresenter unitsDashboardPresenter;
         [SerializeField] private UnitsDebugTool unitsDebugTool;
 
-        private GameContext _context;
+        private GameServices _services;
 
-        public void Initialize(GameContext gameContext)
+        public void Initialize(GameServices services)
         {
-            _context = gameContext ?? throw new ArgumentNullException(nameof(gameContext));
+            _services = services ?? throw new ArgumentNullException(nameof(services));
             ValidateRequiredReferences();
 
             uiRoot.ValidateRequiredReferences();
-            _context.PopupService.Register(uiRoot.PopupViews);
+            uiRoot.HideAllWindows();
 
-            unitSceneService.Initialize(_context.UnitService, _context.UnitCatalog, _context.Settings);
-            unitsDashboardPresenter.Initialize(_context.PopupService, _context.UnitService, _context.UnitStatsService, _context.Settings);
+            unitsScenePresenter.Initialize(_services);
+            unitsDashboardPresenter.Initialize(
+                uiRoot.UnitsDashboardView,
+                _services.UnitCommands,
+                _services.UnitQuery,
+                _services.UnitStatsService,
+                _services.Config);
 
-            _context.UnitService.LoadOrCreateInitial();
-            unitsDebugTool?.Initialize(_context.UnitService, _context.UnitStatsService, unitsDashboardPresenter, _context.Settings);
+            unitsDebugTool?.Initialize(
+                _services.UnitCommands,
+                _services.UnitQuery,
+                _services.UnitStatsService,
+                unitsDashboardPresenter,
+                _services.Config);
+        }
+
+        public void Refresh(GameServices services)
+        {
+            if (services == null)
+            {
+                return;
+            }
+
+            unitsScenePresenter?.Refresh();
+            unitsDashboardPresenter?.Refresh();
         }
 
         public void Dispose()
         {
             unitsDashboardPresenter?.Dispose();
-            unitSceneService?.Dispose();
-            _context?.PopupService?.UnregisterAll();
-            _context = null;
+            unitsScenePresenter?.Dispose();
+            _services = null;
         }
 
         private void ValidateRequiredReferences()
         {
-            if (uiRoot == null || unitSceneService == null || unitsDashboardPresenter == null)
+            if (uiRoot == null || unitsScenePresenter == null || unitsDashboardPresenter == null)
             {
                 throw new InvalidOperationException($"{nameof(SceneInitializer)} requires assigned scene references.");
             }

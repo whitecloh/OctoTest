@@ -1,42 +1,51 @@
 using System;
 using System.IO;
+using Leopotam.EcsLite;
 using OctoGames.TestTask.Core.SaveLoad;
 using OctoGames.TestTask.Data;
-using OctoGames.TestTask.Gameplay.Units;
-using OctoGames.TestTask.UI.Popups;
+using OctoGames.TestTask.Gameplay.Units.Data;
+using OctoGames.TestTask.Gameplay.Units.Runtime;
 using UnityEngine;
 
 namespace OctoGames.TestTask.App.Bootstrap
 {
     public sealed class GameServicesInstaller : MonoBehaviour
     {
-        [SerializeField] private OctoTestSettings settings;
+        [SerializeField] private GameConfig settings;
         [SerializeField] private UnitCatalog unitCatalog;
 
-        public GameContext Build()
+        public GameServices Build(EcsWorld world)
         {
+            if (world == null)
+            {
+                throw new ArgumentNullException(nameof(world));
+            }
+
             if (settings == null || unitCatalog == null)
             {
-                throw new InvalidOperationException($"{nameof(GameServicesInstaller)} requires assigned {nameof(OctoTestSettings)} and {nameof(UnitCatalog)}.");
+                throw new InvalidOperationException($"{nameof(GameServicesInstaller)} requires assigned {nameof(GameConfig)} and {nameof(UnitCatalog)}.");
             }
 
             string saveDirectory = Path.Combine(Application.persistentDataPath, settings.SaveDirectoryName);
             
             SaveLoadService saveLoadService = new SaveLoadService(new JsonSaveSerializer(), saveDirectory);
-            PopupService popupService = new PopupService();
-            UnitService unitService = new UnitService(settings, saveLoadService, unitCatalog);
+            UnitSpawnGrid unitGrid = new UnitSpawnGrid(
+                settings.SpawnZoneColumns,
+                settings.SpawnZoneRows,
+                settings.SpawnPointSpacing,
+                Vector3.zero);
+            UnitCommands unitCommands = new UnitCommands(world);
+            UnitQuery unitQuery = new UnitQuery(world);
             UnitStatsService unitStatsService = new UnitStatsService();
 
-            ServiceRegistry serviceRegistry = new ServiceRegistry();
-            serviceRegistry.Bind(settings);
-            serviceRegistry.Bind(unitCatalog);
-            serviceRegistry.Bind<ISaveLoadService>(saveLoadService);
-            serviceRegistry.Bind(saveLoadService);
-            serviceRegistry.Bind(popupService);
-            serviceRegistry.Bind(unitService);
-            serviceRegistry.Bind(unitStatsService);
-
-            return new GameContext(serviceRegistry);
+            return new GameServices(
+                settings,
+                unitCatalog,
+                saveLoadService,
+                unitGrid,
+                unitCommands,
+                unitQuery,
+                unitStatsService);
         }
     }
 }

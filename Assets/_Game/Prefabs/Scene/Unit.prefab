@@ -45,7 +45,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 667bb83bc1d74a6aab2fdd8fa8fa5c08, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: OctoTest.Runtime::OctoGames.TestTask.Gameplay.Units.UnitView
+  m_EditorClassIdentifier: OctoTest.Runtime::OctoGames.TestTask.Gameplay.Units.Presentation.UnitView
   valueText: {fileID: 4653635440517388180}
   spriteRenderer: {fileID: 8961906574712048381}
 --- !u!212 &8961906574712048381

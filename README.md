@@ -2,55 +2,135 @@
 
 ## Overview
 
-This project contains a compact Unity implementation for the test task:
+This project is a compact Unity implementation for the Octo Games test task.
+
+It covers:
 
 - generic JSON save/load utility;
-- concrete dashboard popup built with uGUI and TextMeshPro;
-- refactored `CharactersView` with throttled UI refresh;
-- grid-based unit spawn/movement demo;
+- LeoECS-based unit gameplay state;
+- grid-based unit spawn and snake-like movement;
+- unit values, stats, save and restore flow;
+- concrete dashboard UI built with uGUI and TextMeshPro;
+- MVP-style UI boundary: presenters update views and send commands;
 - scene-scoped gameplay entity registry;
-- ScriptableObject settings and a simple bootstrap layer.
+- ScriptableObject config and unit catalog;
+- focused EditMode tests for gameplay flow and UI refresh throttling.
 
-The scope is intentionally small. The code avoids recurring `GetComponent` calls in UI update loops, repeated scene scans, and log spam from frequently updated systems.
+The scope is intentionally small. The code avoids generic managers, service locators, scene scans in UI loops, repeated `GetComponent` calls, and log spam from frequently updated systems.
 
-## Coding Principles
+## Architecture
 
-### Separation of concerns
+The current runtime uses LeoECS as the source of gameplay truth and a small MVP layer for Unity UI.
 
-The implementation keeps gameplay state, scene visuals, UI binding, and persistence in separate classes:
+Runtime flow:
 
-- `GameBootstrapper` starts the scene.
-- `GameServicesInstaller` creates runtime services through a small `ServiceRegistry` composition root.
-- `SceneInitializer` connects scene-authored objects to services.
-- `SaveLoadService` handles file persistence.
-- `UnitService` owns unit state, commands, grid reservations, and save/load.
-- `UnitCatalog` stores designer-authored unit ids, sprites, colors, and start values.
-- `UnitMovementPlanner` calculates grid movement plans using reusable buffers.
-- `UnitSaveMapper` converts runtime unit state to and from save DTOs.
-- `UnitsSaveMigrationPipeline` provides an extension point for future save migrations.
-- `UnitSceneService` owns unit prefab instances and movement animation.
-- `UnitSceneService` draws editor gizmos for spawn points and movement order.
-- `UnitsDashboardPresenter` connects popup button callbacks to unit commands.
-- `UnitStatsService` calculates display data.
-- `CharactersView` only writes already calculated stats to a label.
-- `GameplayEntityRegistryScope` owns per-scene active gameplay entity tracking.
+```text
+GameBootstrapper
+-> GameServicesInstaller
+-> GameServices
+-> EcsWorld + EcsSystems
+-> SceneInitializer
+-> presenters refresh Unity views from ECS state
+```
 
-### Designer-friendly setup
+Main rules:
 
-Designer-facing values live in `OctoTestSettings`:
+- gameplay state lives in ECS components;
+- gameplay changes happen in ECS systems;
+- UI sends requests through `UnitCommands`;
+- UI reads state through `UnitQuery`;
+- MonoBehaviours display scene/UI state, not gameplay rules;
+- save data stores ids and values, not scene objects or prefab references.
+
+For the detailed architecture notes, see `Assets/_Game/Docs/Architecture.md`.
+
+## Script Layout
+
+```text
+Assets/_Game/Scripts/App/Bootstrap
+  Unity entry points and runtime composition.
+
+Assets/_Game/Scripts/Core/SaveLoad
+  Reusable save/load infrastructure.
+
+Assets/_Game/Scripts/Data
+  Project-level ScriptableObject config.
+
+Assets/_Game/Scripts/Gameplay/Entities
+  Scene-scoped active gameplay entity tracking.
+
+Assets/_Game/Scripts/Gameplay/Units/Data
+  Authored unit data: catalog and definitions.
+
+Assets/_Game/Scripts/Gameplay/Units/Ecs
+  ECS components and request components.
+
+Assets/_Game/Scripts/Gameplay/Units/Ecs/Systems
+  LeoECS systems. One behavior per system.
+
+Assets/_Game/Scripts/Gameplay/Units/Runtime
+  Concrete runtime API over ECS: commands, queries, snapshots, stats, grid.
+
+Assets/_Game/Scripts/Gameplay/Units/Persistence
+  Unit save DTOs and save migrations.
+
+Assets/_Game/Scripts/Gameplay/Units/Presentation
+  Scene presenters and Unity views for units.
+
+Assets/_Game/Scripts/Gameplay/Units/Diagnostics
+  Debug-only scene tools.
+
+Assets/_Game/Scripts/UI
+  Scene UI root.
+
+Assets/_Game/Scripts/UI/Dashboard
+  Concrete dashboard views and buttons.
+```
+
+## Bootstrap
+
+Files:
+
+- `App/Bootstrap/GameBootstrapper.cs`
+- `App/Bootstrap/GameServicesInstaller.cs`
+- `App/Bootstrap/GameServices.cs`
+- `App/Bootstrap/EcsCompositionRoot.cs`
+- `App/Bootstrap/SceneInitializer.cs`
+
+`GameBootstrapper` owns the Unity lifetime of the ECS world and systems. It creates the world, builds concrete services, creates systems through `EcsCompositionRoot`, initializes scene presenters, sends the initial load request, and runs ECS every frame.
+
+`EcsCompositionRoot` is the only place that defines system order:
+
+1. `LoadOrStartUnitsSystem`
+2. `StartNewGameSystem`
+3. `SpawnUnitSystem`
+4. `MoveUnitsSystem`
+5. `UnitMovementSystem`
+6. `IncreaseRandomUnitValueSystem`
+7. `RemoveLastUnitSystem`
+8. `SaveUnitsSystem`
+9. `CleanupUnitRequestsSystem`
+
+## Designer-Facing Data
+
+Designer-facing project values live in `GameConfig`:
 
 - save directory and file name;
 - grid dimensions and spacing;
 - initial and maximum unit count;
 - unit movement speed;
+- value increase amount;
 - UI refresh interval and label format.
 
-Unit ids, sprites, colors, and start values live in `UnitCatalog`. The popup, button prefab, unit prefab, catalog, and scene references are authored in Unity assets/prefabs and validated at boot.
+Unit ids, sprites, colors, and start values live in `UnitCatalog` / `UnitDefinition`.
+
+Scene references, prefabs, UI, catalog, and config assets are authored in Unity and validated at boot.
 
 ## Save/Load Utility
 
 Files:
 
+- `Core/SaveLoad/ISaveLoadService.cs`
 - `Core/SaveLoad/ISaveSerializer.cs`
 - `Core/SaveLoad/JsonSaveSerializer.cs`
 - `Core/SaveLoad/SaveLoadResult.cs`
@@ -81,62 +161,40 @@ Behavior:
 - existing saves are replaced through a temp file, with a `.bak` copy kept when the platform supports file replacement;
 - `JsonSaveSerializer` uses Unity `JsonUtility`, so DTOs should be Unity-serializable field-based classes.
 
-## Dashboard Popup
+## Unit Gameplay
 
-Files:
+Current gameplay:
 
-- `UI/Popups/PopupButtonData.cs`
-- `UI/Popups/PopupRequest.cs`
-- `UI/Popups/PopupService.cs`
-- `UI/Popups/IPopupView.cs`
-- `UI/Popups/PopupView.cs`
-- `UI/Popups/DashboardPopupView.cs`
-- `UI/Popups/PopupButtonPanelView.cs`
-- `UI/Popups/PopupButtonView.cs`
-- `UI/Popups/UiRoot.cs`
+```text
+field -> units -> snake movement -> unit values -> save/load -> dashboard
+```
 
-The current popup is intentionally concrete: it contains title/body texts, a 1-5 button panel, and the embedded `CharactersView` panel used by the unit dashboard. If another popup type is needed later, it should be added as another isolated `PopupView` implementation and registered separately.
+Runtime API:
 
-The scene flow is:
+- `UnitCommands` creates ECS request entities;
+- `UnitQuery` exposes read-only ECS snapshots and stats inputs;
+- `UnitSnapshot` is the read model used by presenters;
+- `UnitStatsService` calculates dashboard stats;
+- `UnitSpawnGrid` owns grid point positions and reservations.
 
-1. `UiRoot` stores scene popup views.
-2. `SceneInitializer` registers them in `PopupService`.
-3. `UnitsDashboardPresenter` shows `DashboardPopupView` with a `PopupRequest`.
-4. `PopupButtonPanelView` reuses a small grow-only pool of `PopupButtonView` instances from the assigned button prefab.
+ECS components:
 
-`PopupService` also exposes generic `Show<TPopup, TRequest>()` and `LoadAndShow<TPopup, TRequest>()` methods for future isolated popup implementations.
+- `UnitComponent`
+- `UnitValueComponent`
+- `UnitGridPositionComponent`
+- `UnitWorldPositionComponent`
+- `UnitMovingComponent`
 
-Recommended Unity components:
+ECS requests:
 
-- `Canvas`, `CanvasScaler`, `GraphicRaycaster` on the UI root;
-- `Image` for popup panel/overlay visuals;
-- `TextMeshProUGUI` for title, body, stats, and button labels;
-- `Button` for actions;
-- `HorizontalLayoutGroup` or `VerticalLayoutGroup` for button layout;
-- optional `CanvasGroup` for visibility and raycast blocking.
+- `LoadOrCreateUnitsRequest`
+- `StartNewGameRequest`
+- `SpawnUnitRequest`
+- `MoveUnitsRequest`
+- `IncreaseRandomUnitValueRequest`
+- `RemoveLastUnitRequest`
 
-## Unit Demo
-
-Files:
-
-- `Gameplay/Units/UnitRuntimeState.cs`
-- `Gameplay/Units/UnitCatalog.cs`
-- `Gameplay/Units/UnitDefinition.cs`
-- `Gameplay/Units/UnitService.cs`
-- `Gameplay/Units/UnitMovementPlanner.cs`
-- `Gameplay/Units/UnitSaveMapper.cs`
-- `Gameplay/Units/UnitSpawnGrid.cs`
-- `Gameplay/Units/UnitSceneService.cs`
-- `Gameplay/Units/UnitView.cs`
-- `Gameplay/Units/UnitStats.cs`
-- `Gameplay/Units/UnitStatsService.cs`
-- `Gameplay/Units/UnitsDashboardPresenter.cs`
-- `Gameplay/Units/UnitsSaveData.cs`
-- `Gameplay/Units/UnitSaveData.cs`
-- `Gameplay/Units/UnitsSaveMigrationPipeline.cs`
-- `Views/CharactersView.cs`
-
-Dashboard buttons:
+Dashboard commands:
 
 - `Play`: starts a new game and creates the configured initial unit count;
 - `Spawn`: creates one unit at the first free grid point;
@@ -144,22 +202,91 @@ Dashboard buttons:
 - `Value +`: increases a random unit value;
 - `Remove`: removes the last unit.
 
-New units are created from a random `UnitDefinition` in `UnitCatalog`. The selected definition controls the saved `dataId`, initial value, sprite, and color.
+Movement is split into two systems:
 
-Saved unit state is minimal:
+- `MoveUnitsSystem` builds and applies the movement plan by adding `UnitMovingComponent`;
+- `UnitMovementSystem` moves units toward their reserved target positions.
+
+If a save happens while a unit is moving, the saved `pointIndex` is the reserved target cell. On load, units are restored as stationary on that cell.
+
+## Unit Save Data
+
+Files:
+
+- `Gameplay/Units/Persistence/UnitsSaveData.cs`
+- `Gameplay/Units/Persistence/UnitSaveData.cs`
+- `Gameplay/Units/Persistence/IUnitsSaveMigration.cs`
+- `Gameplay/Units/Persistence/UnitsSaveMigrationPipeline.cs`
+
+Saved unit state is intentionally minimal:
 
 - `runtimeId`;
 - `dataId`;
 - `value`;
 - `pointIndex`.
 
-`UnitsSaveData` inherits from `UnitsSaveData_v_1_0`, following a versioned DTO pattern. Save fields are private `[SerializeField]` fields exposed through properties and small methods, so runtime code does not depend on raw serialized fields. `UnitsSaveMigrationPipeline` is kept as the extension point for future save migrations.
+The save file does not store `GameObject`, `MonoBehaviour`, prefab, sprite, animation, or transform references. Unit visuals are restored from `UnitCatalog` by `dataId`.
 
-Runtime movement state is not saved. If a save happens while a unit is moving, the saved `pointIndex` is the target cell. On load, units are restored as stationary on that cell. Invalid out-of-grid cells and duplicate occupied cells are skipped.
+`UnitsSaveData` inherits from `UnitsSaveData_v_1_0`, following a versioned DTO pattern. `UnitsSaveMigrationPipeline` is the extension point for future save versions.
 
-UI stats are event-driven and throttled by `OctoTestSettings.UnitsViewUpdateInterval`. `CharactersView` does not scan scene objects and does not own gameplay references.
+## Dashboard UI
 
-`UnitSceneService` can draw spawn point gizmos in the Scene view. The first point is marked with a separate origin color, each point is drawn as a wire sphere, and optional path lines show the current movement order.
+Files:
+
+- `UI/UiRoot.cs`
+- `UI/Dashboard/DashboardWindowView.cs`
+- `UI/Dashboard/UnitsDashboardView.cs`
+- `UI/Dashboard/UnitsStatsView.cs`
+- `UI/Dashboard/DashboardButtonData.cs`
+- `UI/Dashboard/DashboardButtonPanelView.cs`
+- `UI/Dashboard/DashboardButtonView.cs`
+- `Gameplay/Units/Presentation/UnitsDashboardPresenter.cs`
+
+The dashboard is intentionally concrete. The project currently has one runtime dashboard, so there is no generic popup service or popup registry.
+
+Scene flow:
+
+1. `SceneInitializer` receives the scene-authored `UiRoot`.
+2. `UiRoot` exposes the assigned `UnitsDashboardView`.
+3. `UnitsDashboardPresenter` configures title, body, buttons, callbacks, and stats view.
+4. Button callbacks call `UnitCommands`.
+5. Stats are read through `UnitQuery` and written by `UnitsStatsView`.
+
+Recommended Unity components:
+
+- `Canvas`, `CanvasScaler`, `GraphicRaycaster` on the UI root;
+- `Image` for panel/overlay visuals;
+- `TextMeshProUGUI` for title, body, stats, and button labels;
+- `Button` for actions;
+- layout groups for button layout;
+- `CanvasGroup` for visibility, interaction, and raycast blocking.
+
+If the project later needs story choices, tutorials, warnings, or confirmations, add concrete views such as `ChoicePopupView` or `WarningPopupView`. Do not add generic popup infrastructure until there is a real second popup workflow.
+
+## UI Refresh
+
+`UnitsDashboardPresenter` refreshes stats through `RefreshThrottle`, using `GameConfig.UnitsViewUpdateInterval`.
+
+The UI does not:
+
+- scan scene objects;
+- call `GetComponent` in update loops;
+- calculate gameplay state from transforms;
+- log every refresh.
+
+This directly addresses the original `CharactersView` performance/refactoring task from the test assignment.
+
+## Scene Presentation
+
+Files:
+
+- `Gameplay/Units/Presentation/UnitsScenePresenter.cs`
+- `Gameplay/Units/Presentation/UnitView.cs`
+- `Gameplay/Units/Presentation/RefreshThrottle.cs`
+
+`UnitsScenePresenter` synchronizes Unity scene objects with ECS snapshots. It creates or reuses `UnitView` instances, updates visuals from `UnitCatalog`, applies positions, hides removed units, and draws spawn/movement gizmos in the Scene view.
+
+It does not own gameplay rules. Gameplay rules live in ECS systems.
 
 ## Gameplay Entity Tracking
 
@@ -170,9 +297,9 @@ Files:
 - `Gameplay/Entities/GameplayEntityRegistry.cs`
 - `Gameplay/Entities/GameplayEntityRegistryScope.cs`
 
-`GameplayEntity` registers in `OnEnable` and unregisters in `OnDisable`/`OnDestroy`. `MarkRemoved()` unregisters the entity and prevents future registration. Registration is scoped through `GameplayEntityRegistryScope`, so each scene/context can own its own registry instead of relying on static global state.
+`GameplayEntity` registers in `OnEnable` and unregisters in `OnDisable` / `OnDestroy`. `MarkRemoved()` unregisters the entity and prevents future registration.
 
-Query without allocations by reusing a caller-owned list:
+Query active entities by reusing a caller-owned list:
 
 ```csharp
 private readonly List<IGameplayEntity> activeEntities = new();
@@ -189,16 +316,20 @@ The registry skips and prunes null, destroyed, disabled, inactive, and removed e
 - `Run Safe Stress Test`: bounded spawn/move/value commands with waits between steps;
 - `Run Throttling Probe`: several quick value changes followed by a refresh-count check.
 
-The tool uses conservative limits and does not execute unless explicitly triggered or its auto-run flags are enabled in the inspector.
+The tool does not execute unless explicitly triggered or its auto-run flags are enabled in the inspector.
 
 ## Automated Checks
 
-EditMode tests live in `Assets/Tests/EditMode`:
+EditMode tests live in `Assets/_Game/Tests/EditMode`:
 
-- `UnitServiceStressTests` runs bounded spawn, value, move, completion, and save validation without opening a scene;
+- `UnitEcsFlowTests` validates bounded spawn, movement, save/load restore, and max-unit behavior;
 - `RefreshThrottleTests` verifies that burst UI refresh requests are coalesced until the refresh interval passes.
 
-Run them from Unity via `Window > General > Test Runner > EditMode > Run All`.
+Run them from Unity via:
+
+```text
+Window > General > Test Runner > EditMode > Run All
+```
 
 Batchmode command, when the project is not already open in Unity:
 
@@ -206,18 +337,38 @@ Batchmode command, when the project is not already open in Unity:
 & 'U:\UNITY\6000.3.10f1\Editor\Unity.exe' -batchmode -quit -projectPath 'U:\UNITY PROJECTS\OctoTest' -runTests -testPlatform EditMode -testResults 'Logs\editmode-test-results.xml' -logFile 'Logs\editmode-test-run.log'
 ```
 
+Quick compile gate used during refactoring:
+
+```powershell
+dotnet build "OctoTest.sln" --no-restore
+```
+
 ## Manual Checklist
 
-1. Open `Assets/Scenes/MainScene.unity`.
-2. Enter Play Mode and confirm the dashboard popup opens.
+1. Open `Assets/_Game/Scenes/MainScene.unity`.
+2. Enter Play Mode and confirm the units dashboard opens.
 3. Press `Spawn`, `Move`, `Value +`, and `Remove`.
 4. Confirm scene units and dashboard stats update.
 5. Re-enter Play Mode and confirm saved unit state is restored.
-6. Corrupt the save file manually and confirm the game creates a valid initial state instead of crashing.
+6. Corrupt the save file manually and confirm the game starts safely instead of crashing.
+
+## Extension Rules
+
+Add a new gameplay command as:
+
+```text
+request component -> one small system -> optional view button -> focused test
+```
+
+Add new unit authored data through `UnitCatalog` first. Add ECS components only when the value is runtime state, not authored config.
+
+Avoid new managers, registries, factories, or interfaces until there are at least two concrete use cases that make the abstraction useful.
 
 ## Possible Extensions
 
-- localized popup text keys;
-- separate popup implementations for other use cases;
-- popup queueing/stacking;
-- a shared UI item pool utility if several screens need the same reuse pattern.
+- localized dashboard and popup text keys;
+- concrete popup views for story choices, confirmations, warnings, and tutorials;
+- Addressables for UI, unit prefabs, backgrounds, videos, and VN content;
+- async save/load for larger save files;
+- editor validation tools for `GameConfig` and `UnitCatalog`;
+- profiler pass for UI rebuilds, allocations, and save/load spikes.

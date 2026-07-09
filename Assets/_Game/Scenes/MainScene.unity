@@ -167,7 +167,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a065b164f7afa3c449383643b04615f5, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: OctoTest.Runtime::OctoGames.TestTask.Views.CharactersView
+  m_EditorClassIdentifier: OctoTest.Runtime::OctoGames.TestTask.UI.Dashboard.UnitsStatsView
   label: {fileID: 830274571}
 --- !u!1 &191852932
 GameObject:
@@ -181,7 +181,7 @@ GameObject:
   - component: {fileID: 191852935}
   - component: {fileID: 191852934}
   m_Layer: 5
-  m_Name: DashboardPopup_View
+  m_Name: UnitsDashboard_View
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -233,13 +233,13 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0fe8dcd5adb64770895a2c7bbece5a29, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: OctoTest.Runtime::OctoGames.TestTask.UI.Popups.DashboardPopupView
+  m_EditorClassIdentifier: OctoTest.Runtime::OctoGames.TestTask.UI.Dashboard.UnitsDashboardView
   popupId: dashboard_view
   canvasGroup: {fileID: 191852934}
   titleText: {fileID: 1832789534}
   bodyText: {fileID: 1900747580}
   buttonPanel: {fileID: 1772724304}
-  charactersView: {fileID: 20167623}
+  statsView: {fileID: 20167623}
 --- !u!1 &330585543
 GameObject:
   m_ObjectHideFlags: 0
@@ -859,7 +859,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1a565f46abc54c82a8895316345bb297, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: OctoTest.Runtime::OctoGames.TestTask.UI.Popups.PopupButtonPanelView
+  m_EditorClassIdentifier: OctoTest.Runtime::OctoGames.TestTask.UI.Dashboard.DashboardButtonPanelView
   buttonsRoot: {fileID: 1728966289}
   buttonPrefab: {fileID: 8538524719993235205, guid: 37bb0b5d87e526240a59bee89832a673, type: 3}
 --- !u!224 &1772724305
@@ -1021,7 +1021,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: OctoTest.Runtime::OctoGames.TestTask.App.Bootstrap.SceneInitializer
   uiRoot: {fileID: 1816801797}
-  unitSceneService: {fileID: 1816801796}
+  unitsScenePresenter: {fileID: 1816801796}
   unitsDashboardPresenter: {fileID: 1816801795}
   unitsDebugTool: {fileID: 1816801799}
 --- !u!114 &1816801792
@@ -1078,7 +1078,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 092297d2b04446d19ad99700db47e499, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: OctoTest.Runtime::OctoGames.TestTask.Gameplay.Units.UnitsDashboardPresenter
+  m_EditorClassIdentifier: OctoTest.Runtime::OctoGames.TestTask.Gameplay.Units.Presentation.UnitsDashboardPresenter
 --- !u!114 &1816801796
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1090,7 +1090,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dfcfaaf2704642e0a34a37fe8ae82017, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: OctoTest.Runtime::OctoGames.TestTask.Gameplay.Units.UnitSceneService
+  m_EditorClassIdentifier: OctoTest.Runtime::OctoGames.TestTask.Gameplay.Units.Presentation.UnitsScenePresenter
   settings: {fileID: 11400000, guid: b820848b1cf14c25b6ed0ac766599ce8, type: 2}
   unitPrefab: {fileID: 7429800204819372396, guid: fbf2d1ec44614084e9bb86e62a898879, type: 3}
   unitsRoot: {fileID: 2075659389}
@@ -1112,8 +1112,8 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 31ed8de2de854cb09120f4e6a713af19, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: OctoTest.Runtime::OctoGames.TestTask.UI.Popups.UiRoot
-  popupViews:
+  m_EditorClassIdentifier: OctoTest.Runtime::OctoGames.TestTask.UI.UiRoot
+  dashboardWindows:
   - {fileID: 191852935}
 --- !u!114 &1816801798
 MonoBehaviour:
@@ -1138,7 +1138,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8ac7e93d5b144aee89c29a5d2b0a8e13, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: OctoTest.Runtime::OctoGames.TestTask.Gameplay.Units.UnitsDebugTool
+  m_EditorClassIdentifier: OctoTest.Runtime::OctoGames.TestTask.Gameplay.Units.Diagnostics.UnitsDebugTool
   runStressOnStart: 0
   runThrottleProbeOnStart: 0
   stressSpawnAttempts: 64

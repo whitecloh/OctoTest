@@ -2,6 +2,7 @@
     "name": "OctoTest.EditMode.Tests",
     "rootNamespace": "OctoGames.TestTask.Tests",
     "references": [
+        "Leopotam.EcsLite",
         "OctoTest.Runtime"
     ],
     "includePlatforms": [

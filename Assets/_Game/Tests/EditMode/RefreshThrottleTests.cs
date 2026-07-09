@@ -1,5 +1,5 @@
 using NUnit.Framework;
-using OctoGames.TestTask.Gameplay.Units;
+using OctoGames.TestTask.Gameplay.Units.Presentation;
 
 namespace OctoGames.TestTask.Tests
 {

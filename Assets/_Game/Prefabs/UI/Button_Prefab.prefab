@@ -306,6 +306,6 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c991af76acc142858d5b80c8f99ef00d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: OctoTest.Runtime::OctoGames.TestTask.UI.Popups.PopupButtonView
+  m_EditorClassIdentifier: OctoTest.Runtime::OctoGames.TestTask.UI.Dashboard.DashboardButtonView
   button: {fileID: 7010094122872872478}
   label: {fileID: 5049646589718565137}

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 using OctoGames.TestTask.Data;
-using OctoGames.TestTask.Gameplay.Units;
+using OctoGames.TestTask.Gameplay.Units.Data;
 using UnityEngine;
 
 namespace OctoGames.TestTask.Tests
@@ -10,9 +10,9 @@ namespace OctoGames.TestTask.Tests
     {
         private const BindingFlags FieldFlags = BindingFlags.Instance | BindingFlags.NonPublic;
 
-        public static OctoTestSettings CreateSettings(string saveFileName, int columns, int rows, int initialUnits, int maxUnits)
+        public static GameConfig CreateSettings(string saveFileName, int columns, int rows, int initialUnits, int maxUnits)
         {
-            OctoTestSettings settings = ScriptableObject.CreateInstance<OctoTestSettings>();
+            GameConfig settings = ScriptableObject.CreateInstance<GameConfig>();
             Set(settings, "saveDirectoryName", "Tests");
             Set(settings, "unitsSaveFileName", saveFileName);
             Set(settings, "spawnZoneColumns", columns);
